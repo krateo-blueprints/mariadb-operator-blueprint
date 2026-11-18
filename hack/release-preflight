@@ -24,10 +24,10 @@
 set -euo pipefail
 
 version="${1:-}"
-if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::'${version}' is not a plain X.Y.Z release version"
-  exit 1
-fi
+# The version's shape is checked before this hook runs, by the shared release-preflight.yaml (charts 1.4.3 and later),
+# with rule 13's exact pattern; the check that stood here (`^[0-9]+\.[0-9]+\.[0-9]+$`) accepted 0.015.0 and is retired.
+# hack/validate-shared-preflight.py runs the pinned shared step and requires it to refuse what this check refused.
+# What only this hook can check follows: every chart, CRD and CompositionDefinition mirrors this version.
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 crds_chart="$root/blueprints/mariadb-operator-crds/chart/Chart.yaml"
