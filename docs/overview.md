@@ -37,7 +37,10 @@ The chart depends on upstream's `mariadb-operator` chart at the same version and
 - `crds.enabled: false`: the CRDs belong to the CRDs chart. Upstream warns that a chart managing the CRDs deletes every
   MariaDB when it is uninstalled.
 - The operator: 3 replicas with leader election, required pod anti-affinity by hostname, a PodDisruptionBudget with
-  `maxUnavailable: 1`. With replication topologies the operator performs failover, so it must survive a node.
+  `maxUnavailable: 1`. Why 3 and not 1: most operators only reconcile, so a short outage breaks nothing that is running.
+  mariadb-operator performs the replication failover itself (`autoFailover`: it promotes the most advanced replica and
+  repoints the `-primary` Service), so while no operator replica runs, a lost primary is not replaced at all. It is
+  failover-critical, and must survive a node.
 - The webhook: the same, because an unavailable webhook refuses every write to a mariadb-operator object. Its
   certificate is a cert-manager Certificate, so upstream's cert-controller is not rendered.
 - The images, pinned explicitly to the chart's version, so they are resolved on every pull request.
@@ -50,6 +53,21 @@ The operator chart refuses to render, with the message on the Composition's stat
   chart), or is older than the operator;
 - cert-manager's `certificates.cert-manager.io` or `issuers.cert-manager.io` is not served.
 
-Each check is a named GET of a CRD. Without core-provider's own CRD (`compositiondefinitions.core.krateo.io`) the render
+When the render can read the nodes, it also refuses fewer than `ha.replicas` schedulable nodes: not cordoned, no
+NoSchedule/NoExecute taint the pods do not tolerate, matching their nodeSelector, counted per `kubernetes.io/hostname`.
+Listing nodes needs a permission core-provider's render identity lacks, and a refused lookup aborts the whole render,
+so the lookup runs only when an administrator has applied `blueprints/mariadb-operator/node-reader-rbac.yaml` (a
+ClusterRole for nodes/list bound to this namespace's service accounts). Without it the check is skipped and the
+ConfigMap `<release>-preconditions` records `nodes: unmeasured`.
+
+Each CRD check is a named GET of a CRD. Without core-provider's own CRD (`compositiondefinitions.core.krateo.io`) the render
 is offline (`helm template`, CI) and nothing is checked. `preconditions.enabled: false` turns the check off, for
 clusters that manage the CRDs themselves at this version.
+
+## Layout and pins
+
+- `blueprints/<chart>/chart/` holds each chart, `blueprints/<chart>/compositiondefinition.yaml` its CompositionDefinition
+  (in `mariadb-operator-system`, the `<name>-system` convention for cluster-prerequisite blueprints).
+- The upstream dependency is locked by `Chart.lock`, and each upstream chart is pinned by its OCI manifest digest
+  (`krateo.io/upstream-digest`). `hack/validate-chart-lock.py --live` checks both in lint and before every release.
+- Every workflow `uses:` is pinned to a full commit SHA (`hack/validate-release-wiring.py`).

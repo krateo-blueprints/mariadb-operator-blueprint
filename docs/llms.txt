@@ -4,15 +4,18 @@ Krateo blueprint for mariadb-operator 26.10.2, as two Compositions published on 
 oci://ghcr.io/krateo-blueprints/charts/mariadb-operator-crds and oci://ghcr.io/krateo-blueprints/charts/mariadb-operator.
 
 ## Shape
-- helm/mariadb-operator-crds: the 12 upstream CRDs, vendored, each with helm.sh/resource-policy keep and
+- blueprints/mariadb-operator-crds/chart: the 12 upstream CRDs, vendored, each with helm.sh/resource-policy keep and
   krateo.io/upstream-version. Kind MariadbOperatorCrds.
-- helm/mariadb-operator: upstream chart 26.10.2 as a dependency; 3 replicas with leader election, required hostname
+- blueprints/mariadb-operator/chart: upstream chart 26.10.2 as a dependency; 3 replicas with leader election, required hostname
   anti-affinity, PodDisruptionBudgets, webhook certificate from cert-manager. Kind MariadbOperator.
-- compositiondefinitions/<chart>/compositiondefinition.yaml: shipped inside each archive.
+- blueprints/<chart>/compositiondefinition.yaml: beside each chart, shipped inside each archive; namespace
+  mariadb-operator-system (the <name>-system convention for cluster-prerequisite blueprints).
 
 ## Preconditions
 - cert-manager from any source (Krateo installer features.ingress, or a generic install).
-- The operator chart refuses to render while the CRDs (at its version or newer) or cert-manager's CRDs are not served.
+- The operator chart refuses to render while the CRDs (at its version or newer) or cert-manager's CRDs are not served,
+  and, with the node-read grant applied, while fewer than 3 nodes can take its replicas.
+- Pins: Chart.lock (helm dependency build), krateo.io/upstream-digest per upstream chart, workflow uses: by SHA.
 
 ## Versioning
 - Literal 26.10.2 in both charts, mirroring upstream; served at composition.krateo.io/v26-10-2.

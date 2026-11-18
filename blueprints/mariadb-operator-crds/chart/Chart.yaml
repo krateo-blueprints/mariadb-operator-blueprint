@@ -23,3 +23,5 @@ maintainers:
 annotations:
   krateo.io/upstream-chart: oci://ghcr.io/mariadb-operator/charts/mariadb-operator-crds
   krateo.io/upstream-version: "26.10.2"
+  # The OCI manifest digest upstream serves for that version, so a re-pushed tag is refused (hack/validate-chart-lock.py).
+  krateo.io/upstream-digest: "sha256:d2d7b7a925a0d4a113575749440ebe4610905d0c0040efd439076ff1cbe072b2"

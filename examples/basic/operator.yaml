@@ -5,5 +5,5 @@ apiVersion: composition.krateo.io/v26-10-2
 kind: MariadbOperator
 metadata:
   name: mariadb-operator
-  namespace: mariadb-operator
+  namespace: mariadb-operator-system
 spec: {}

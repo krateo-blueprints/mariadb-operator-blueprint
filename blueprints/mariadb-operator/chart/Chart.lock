@@ -1,0 +1,6 @@
+dependencies:
+- name: mariadb-operator
+  repository: oci://ghcr.io/mariadb-operator/charts
+  version: 26.10.2
+digest: sha256:b8a69d653d5429e3f89be9570dfbaeacd19eda694143b9d84b5183da0e12a3ea
+generated: "2026-11-18T08:18:08.657606+01:00"

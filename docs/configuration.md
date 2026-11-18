@@ -41,4 +41,8 @@ documents every key. This blueprint sets:
 | `webhook.ha`, `webhook.affinity`, `webhook.pdb`: the same | an unavailable webhook refuses every write |
 | `webhook.cert.certManager.enabled: true` | the certificate comes from cert-manager; the cert-controller is not rendered |
 
-Required anti-affinity needs 3 schedulable nodes. Nothing defaults to a cloud provider, a StorageClass or a node pool.
+Required anti-affinity needs 3 schedulable nodes, and the render refuses fewer when it can read the nodes (see
+[overview.md](overview.md)). The replicas are 3 because the operator performs the replication failover: unlike an
+operator that only reconciles, its absence means a lost primary is not replaced. Taints and node selectors you add under
+`mariadb-operator.tolerations`, `mariadb-operator.nodeSelector` and their `webhook.` equivalents are honoured by that
+check. Nothing defaults to a cloud provider, a StorageClass or a node pool.

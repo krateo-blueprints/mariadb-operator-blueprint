@@ -14,23 +14,20 @@ permissions:
 
 jobs:
   lint-docs:
-    uses: krateo-platformops/.github/.github/workflows/lint-docs.yaml@main
-
+    uses: krateo-platformops/.github/.github/workflows/lint-docs.yaml@f25d6b526bde39f37bca6a4eb8c493bf4c2bbec1 # main @ 2026-11-17 (the repository has no tags)
   helm:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Helm
-        uses: azure/setup-helm@v5
-
+        uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
       - name: helm lint every chart
         run: |
           set -euo pipefail
-          for dir in helm/*/; do
+          for dir in blueprints/*/chart/; do
             echo "::group::${dir}"
-            helm dependency update "$dir"
+            if [ -f "${dir}Chart.lock" ]; then helm dependency build "$dir"; fi
             helm lint "$dir" --kube-version 1.36.0
             echo "::endgroup::"
           done
@@ -39,13 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Helm
-        uses: azure/setup-helm@v5
-
+        uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
       - name: Install Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
@@ -57,6 +52,11 @@ jobs:
       # example Compositions carry the one upstream version; a tag can only be that version.
       - name: One version everywhere
         run: python3 hack/validate-version-mirror.py .
+
+      # Chart.lock in sync with Chart.yaml (helm's digest, offline), and the registry still serving each pinned upstream
+      # chart at its krateo.io/upstream-digest (--live).
+      - name: Upstream dependencies are locked and pinned by digest
+        run: python3 hack/validate-chart-lock.py . --live
 
       # The vendored CRDs equal upstream's byte for byte apart from helm.sh/resource-policy keep and the version
       # annotation, so an uninstall never deletes a MariaDB and nothing drifts unnoticed.

@@ -37,9 +37,9 @@ except ImportError:
     sys.exit(2)
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else ".")
-CHART = os.path.join(ROOT, "helm", "mariadb-operator-crds")
+CHART = os.path.join(ROOT, "blueprints", "mariadb-operator-crds", "chart")
 VENDORED = os.path.join(CHART, "templates", "crds.yaml")
-OPERATOR_TPL = os.path.join(ROOT, "helm", "mariadb-operator", "templates", "_preconditions.tpl")
+OPERATOR_TPL = os.path.join(ROOT, "blueprints", "mariadb-operator", "chart", "templates", "_preconditions.tpl")
 failures = []
 
 
@@ -62,7 +62,7 @@ meta = yaml.safe_load(open(os.path.join(CHART, "Chart.yaml")))
 ann = meta.get("annotations") or {}
 ref, version = ann.get("krateo.io/upstream-chart"), str(ann.get("krateo.io/upstream-version") or "")
 if not ref or not version:
-    measurement_failed("helm/mariadb-operator-crds/Chart.yaml names no krateo.io/upstream-chart and upstream-version")
+    measurement_failed("blueprints/mariadb-operator-crds/chart/Chart.yaml names no krateo.io/upstream-chart and upstream-version")
 KEEP = "    helm.sh/resource-policy: keep"
 VER = '    krateo.io/upstream-version: "%s"' % version
 

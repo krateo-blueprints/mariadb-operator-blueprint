@@ -1,0 +1,25 @@
+{{- /* Refuses the render while the operator's preconditions do not hold (_preconditions.tpl), and records what could
+       be measured: a refusal is loud, but a check that could not run must not look like a pass. */ -}}
+{{- if .Values.preconditions.enabled }}
+{{- include "mdbop.preconditions" (list $ (include "mdbop.liveCRDs" . | fromJson)) }}
+{{- $nodes := include "mdbop.liveNodes" . | fromJson }}
+{{- include "mdbop.requireNodes" (list $ $nodes) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-preconditions" .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+data:
+  # CRDs and cert-manager: checked on every live render; a missing or older CRD, or no cert-manager, refuses it.
+  crds: {{ ternary "measured" "unmeasured: offline render (no core-provider CRD)" $nodes.live | quote }}
+{{- if and $nodes.live $nodes.granted }}
+  nodes: {{ printf "measured: %d node(s) seen; required anti-affinity needs %v schedulable" (len $nodes.nodes) (index .Values "mariadb-operator").ha.replicas | quote }}
+{{- else if $nodes.live }}
+  # NOT a pass. The render identity may not list nodes until an administrator applies the node-read grant
+  # (blueprints/mariadb-operator/node-reader-rbac.yaml, its group subject naming this namespace).
+  nodes: {{ printf "unmeasured: no %s grant for system:serviceaccounts:%s" (include "mdbop.nodeReaderName" .) .Release.Namespace | quote }}
+{{- else }}
+  nodes: "unmeasured: offline render (no core-provider CRD)"
+{{- end }}
+{{- end }}

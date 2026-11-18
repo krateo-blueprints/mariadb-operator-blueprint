@@ -50,30 +50,30 @@ def load(path):
     return yaml.safe_load(open(path))
 
 
-crds_chart = load(os.path.join(ROOT, "helm/mariadb-operator-crds/Chart.yaml"))
-op_chart = load(os.path.join(ROOT, "helm/mariadb-operator/Chart.yaml"))
+crds_chart = load(os.path.join(ROOT, "blueprints/mariadb-operator-crds/chart/Chart.yaml"))
+op_chart = load(os.path.join(ROOT, "blueprints/mariadb-operator/chart/Chart.yaml"))
 want = str(crds_chart.get("version") or "")
 if not want:
-    print("FAILED MEASUREMENT: helm/mariadb-operator-crds/Chart.yaml has no version")
+    print("FAILED MEASUREMENT: blueprints/mariadb-operator-crds/chart/Chart.yaml has no version")
     sys.exit(2)
 
 seen = {}
-seen["helm/mariadb-operator-crds appVersion"] = crds_chart.get("appVersion")
-seen["helm/mariadb-operator-crds krateo.io/upstream-version"] = (crds_chart.get("annotations") or {}).get(
+seen["blueprints/mariadb-operator-crds/chart appVersion"] = crds_chart.get("appVersion")
+seen["blueprints/mariadb-operator-crds/chart krateo.io/upstream-version"] = (crds_chart.get("annotations") or {}).get(
     "krateo.io/upstream-version")
-seen["helm/mariadb-operator version"] = op_chart.get("version")
-seen["helm/mariadb-operator appVersion"] = op_chart.get("appVersion")
+seen["blueprints/mariadb-operator/chart version"] = op_chart.get("version")
+seen["blueprints/mariadb-operator/chart appVersion"] = op_chart.get("appVersion")
 deps = [d for d in op_chart.get("dependencies") or [] if d.get("name") == "mariadb-operator"]
-seen["helm/mariadb-operator dependency on upstream mariadb-operator"] = deps[0].get("version") if deps else None
+seen["blueprints/mariadb-operator/chart dependency on upstream mariadb-operator"] = deps[0].get("version") if deps else None
 
-op_values = yaml.safe_load(open(os.path.join(ROOT, "helm/mariadb-operator/values.yaml"))) or {}
+op_values = yaml.safe_load(open(os.path.join(ROOT, "blueprints/mariadb-operator/chart/values.yaml"))) or {}
 upstream_values = op_values.get("mariadb-operator") or {}
-seen["helm/mariadb-operator operator image tag"] = (upstream_values.get("image") or {}).get("tag")
-seen["helm/mariadb-operator webhook image tag"] = ((upstream_values.get("webhook") or {}).get("image") or {}).get("tag")
+seen["blueprints/mariadb-operator/chart operator image tag"] = (upstream_values.get("image") or {}).get("tag")
+seen["blueprints/mariadb-operator/chart webhook image tag"] = ((upstream_values.get("webhook") or {}).get("image") or {}).get("tag")
 
-cds = sorted(glob.glob(os.path.join(ROOT, "compositiondefinitions/*/compositiondefinition.yaml")))
+cds = sorted(glob.glob(os.path.join(ROOT, "blueprints/*/compositiondefinition.yaml")))
 if len(cds) != 2:
-    fail("want 2 CompositionDefinitions under compositiondefinitions/, found %d" % len(cds))
+    fail("want 2 CompositionDefinitions as blueprints/*/compositiondefinition.yaml, found %d" % len(cds))
 for p in cds:
     cd = yaml.safe_load(open(p))
     name = os.path.basename(os.path.dirname(p))
@@ -82,10 +82,10 @@ for p in cds:
     if chart.get("url") != "oci://ghcr.io/krateo-blueprints/charts/%s" % name:
         fail("%s installs %s, not oci://ghcr.io/krateo-blueprints/charts/%s" % (os.path.relpath(p, ROOT),
                                                                                chart.get("url"), name))
-    if not os.path.isfile(os.path.join(ROOT, "helm", name, "Chart.yaml")):
-        fail("%s names chart %s, which is not under helm/" % (os.path.relpath(p, ROOT), name))
+    if not os.path.isfile(os.path.join(ROOT, "blueprints", name, "chart", "Chart.yaml")):
+        fail("%s names chart %s, which has no blueprints/<name>/chart/" % (os.path.relpath(p, ROOT), name))
 
-crd_docs = [d for d in yaml.safe_load_all(open(os.path.join(ROOT, "helm/mariadb-operator-crds/templates/crds.yaml")))
+crd_docs = [d for d in yaml.safe_load_all(open(os.path.join(ROOT, "blueprints/mariadb-operator-crds/chart/templates/crds.yaml")))
             if d and d.get("kind") == "CustomResourceDefinition"]
 if not crd_docs:
     fail("the vendored CRD file holds no CustomResourceDefinition")

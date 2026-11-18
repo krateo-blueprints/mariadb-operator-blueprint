@@ -14,6 +14,13 @@ timestamp: 2026-11-18T00:00:00+00:00
 
 ## Preconditions
 
+- **3 schedulable nodes** for the operator's and the webhook's required anti-affinity. To let the render check this,
+  apply the node-read grant once per cluster, as an administrator (edit its subject if your namespace differs):
+
+  ```sh
+  kubectl apply -f https://raw.githubusercontent.com/krateo-blueprints/mariadb-operator-blueprint/26.10.2/blueprints/mariadb-operator/node-reader-rbac.yaml
+  ```
+
 - **cert-manager**, from any source. With Krateo, the installer's `features.ingress` brings it. A generic install:
 
   ```sh
@@ -22,18 +29,21 @@ timestamp: 2026-11-18T00:00:00+00:00
   ```
 
 - Krateo core-provider. Register both CompositionDefinitions: each published archive carries its own, and the same
-  files are in `compositiondefinitions/`.
+  files are at `blueprints/<chart>/compositiondefinition.yaml`. Both live in `mariadb-operator-system`, the
+  `<name>-system` convention for cluster-prerequisite blueprints, and the examples put the Compositions there too.
 
 ## Install
 
 ```sh
-kubectl create namespace mariadb-operator
+kubectl create namespace mariadb-operator-system
 kubectl apply -f examples/basic/crds.yaml
 kubectl apply -f examples/basic/operator.yaml
 ```
 
-The operator Composition reports the refusal on its status until the CRDs and cert-manager are served, then renders on
-the next reconcile. Nothing has to be re-applied.
+The operator Composition reports the refusal on its status until the CRDs and cert-manager are served (and, when the
+grant is applied, 3 schedulable nodes exist), then renders on the next reconcile. Nothing has to be re-applied.
+`kubectl -n mariadb-operator-system get configmap mariadb-operator-preconditions -o yaml` says which checks were
+measured.
 
 ## Upgrade
 

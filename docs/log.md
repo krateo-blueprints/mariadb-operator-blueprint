@@ -22,3 +22,9 @@ timestamp: 2026-11-18T00:00:00+00:00
   - Released through the organisation's publisher 1.1.0 with the release preflight first.
   - Gates: `validate-version-mirror.py`, `validate-crds-vendored.py`, `validate-operator-ha.py`,
     `validate-release-wiring.py`, `validate-yaml-block-style.py`.
+  - Layout `blueprints/<chart>/chart/` with the CompositionDefinition beside it; CompositionDefinitions and examples in
+    `mariadb-operator-system` (the `<name>-system` convention).
+  - The operator chart also refuses fewer than 3 schedulable nodes when an administrator has granted the render node
+    read (`node-reader-rbac.yaml`); otherwise it records the check as unmeasured.
+  - `Chart.lock` committed and verified (`helm dependency build`), upstream charts pinned by manifest digest, every
+    workflow `uses:` pinned by commit SHA. New gate: `validate-chart-lock.py`.

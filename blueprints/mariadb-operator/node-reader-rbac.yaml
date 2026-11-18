@@ -1,0 +1,35 @@
+# Lets the mariadb-operator Composition's render check that the cluster has enough schedulable nodes for its required
+# anti-affinity (templates/_preconditions.tpl, mdbop.requireNodes). Apply it once per cluster, as an administrator:
+#
+#   kubectl apply -f https://raw.githubusercontent.com/krateo-blueprints/mariadb-operator-blueprint/<tag>/blueprints/mariadb-operator/node-reader-rbac.yaml
+#
+# The chart does not grant this to itself: widening the permissions of the identity that renders it is a decision for a
+# person who can refuse it. Without it the node check is skipped and recorded as unmeasured in the ConfigMap
+# <release>-preconditions. The names are fixed (mdbop.nodeReaderName); the subject is the group of service accounts in
+# the namespace the Composition lives in, mariadb-operator-system by convention: edit it if yours differs.
+# hack/validate-operator-ha.py keeps this file and the chart's check in agreement.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: krateo-mariadb-operator-node-reader
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: krateo-mariadb-operator-node-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: krateo-mariadb-operator-node-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:mariadb-operator-system

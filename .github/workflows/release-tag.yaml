@@ -8,7 +8,7 @@
 # Both charts carry a LITERAL version equal to upstream's (no CHART_VERSION placeholder), so the tag must be exactly
 # that version: hack/release-preflight refuses anything else before a byte is pushed (docs/release.md).
 #
-# Each chart ships its CompositionDefinition (compositiondefinitions/<name>/compositiondefinition.yaml) inside its
+# Each chart ships its CompositionDefinition (blueprints/<name>/compositiondefinition.yaml, beside blueprints/<name>/chart/) inside its
 # archive, so the content is `blueprints` channel content (PUBLISHING.md rule 2).
 name: release-tag
 
@@ -44,8 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Refuse to release a commit no lint run ever passed on (PUBLISHING.md rule 10). A quiet check
       # list reads as success, so the never-triggered case is the one this makes loud.
       - name: The commit being released must have passed lint
@@ -93,8 +92,7 @@ jobs:
           esac
 
       - name: Install Helm
-        uses: azure/setup-helm@v5
-
+        uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
       - name: Resolve version and registry
         run: |
           echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
@@ -104,6 +102,21 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      # The upstream charts this repository builds from must still be the reviewed bytes: every Chart.lock in sync
+      # with its Chart.yaml (helm's own digest), and the registry serving each pinned upstream chart at the
+      # krateo.io/upstream-digest recorded in Chart.yaml. A tag re-pushed upstream is refused here, before anything is
+      # packaged.
+      - name: Install Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Upstream dependencies are the pinned bytes
+        run: |
+          set -euo pipefail
+          pip install "PyYAML==6.0.2"
+          python3 hack/validate-chart-lock.py . --live
 
       # Every chart is packaged and checked first, and only then is anything pushed, so a chart the
       # Marketplace index would refuse never reaches GHCR either (PUBLISHING.md rules 1 to 3).
@@ -153,15 +166,17 @@ jobs:
               .annotations."org.opencontainers.image.version"  = strenv(VERSION) |
               .annotations."org.opencontainers.image.ref.name" = strenv(SRC_REF)
             ' "$cf"
-            # Dependency fetch is retried: a subchart pulled from an upstream registry
-            # (here oci://ghcr.io/mariadb-operator/charts) can fail transiently. After three
+            # Dependencies come from the committed Chart.lock: `helm dependency build` refuses a lock out of sync with
+            # Chart.yaml and never re-resolves (`update` would rewrite the lock silently). The fetch is retried: a
+            # subchart pulled from an upstream registry (here oci://ghcr.io/mariadb-operator/charts) can fail
+            # transiently. After three
             # failures the release stops here, before anything is pushed, so a re-run publishes
             # every chart to GHCR and the index together instead of leaving some charts at the
             # new version in GHCR and none of them in the index.
             if grep -q '^dependencies:' "$cf"; then
               ok=""
               for attempt in 1 2 3; do
-                if helm dependency update "$dir"; then ok=1; break; fi
+                if helm dependency build "$dir"; then ok=1; break; fi
                 echo "::warning::${name}: dependency fetch failed (attempt ${attempt}/3), retrying"
                 sleep $((attempt*10))
               done
@@ -279,7 +294,7 @@ jobs:
 
       # The same bytes that went to GHCR, for the Marketplace index.
       - name: Hand the blueprint tarballs to the index job
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: charts-blueprints
           path: dist/blueprints/*.tgz

@@ -15,7 +15,7 @@ timestamp: 2026-11-18T00:00:00+00:00
 - [operator.yaml](operator.yaml): the operator, 3 replicas, its webhook certificate from cert-manager.
 
 ```sh
-kubectl create namespace mariadb-operator
+kubectl create namespace mariadb-operator-system
 kubectl apply -f crds.yaml -f operator.yaml
 ```
 

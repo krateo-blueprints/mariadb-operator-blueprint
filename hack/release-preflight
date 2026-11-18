@@ -30,9 +30,9 @@ if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-crds_chart="$root/helm/mariadb-operator-crds/Chart.yaml"
-op_chart="$root/helm/mariadb-operator/Chart.yaml"
-crds_file="$root/helm/mariadb-operator-crds/templates/crds.yaml"
+crds_chart="$root/blueprints/mariadb-operator-crds/chart/Chart.yaml"
+op_chart="$root/blueprints/mariadb-operator/chart/Chart.yaml"
+crds_file="$root/blueprints/mariadb-operator-crds/chart/templates/crds.yaml"
 bad=0
 
 # field FILE KEY: the value of a top-level `KEY:` line, quotes stripped.
@@ -51,14 +51,14 @@ for f in "$crds_chart" "$op_chart" "$crds_file"; do
   [ -f "$f" ] || { echo "::error::${f#$root/} is missing; nothing to check the tag against"; exit 1; }
 done
 
-expect "helm/mariadb-operator-crds version" "$(field "$crds_chart" version)"
-expect "helm/mariadb-operator-crds appVersion" "$(field "$crds_chart" appVersion)"
-expect "helm/mariadb-operator version" "$(field "$op_chart" version)"
-expect "helm/mariadb-operator appVersion" "$(field "$op_chart" appVersion)"
+expect "blueprints/mariadb-operator-crds/chart version" "$(field "$crds_chart" version)"
+expect "blueprints/mariadb-operator-crds/chart appVersion" "$(field "$crds_chart" appVersion)"
+expect "blueprints/mariadb-operator/chart version" "$(field "$op_chart" version)"
+expect "blueprints/mariadb-operator/chart appVersion" "$(field "$op_chart" appVersion)"
 dep="$(awk '/^dependencies:/{d=1} d && /name: mariadb-operator$/{n=1} n && /version:/{gsub(/[" ]/,"",$2); print $2; exit}' "$op_chart")"
-expect "helm/mariadb-operator's dependency on upstream mariadb-operator" "$dep"
-for cd in "$root"/compositiondefinitions/*/compositiondefinition.yaml; do
-  [ -f "$cd" ] || { echo "::error::no CompositionDefinition under compositiondefinitions/"; exit 1; }
+expect "blueprints/mariadb-operator/chart's dependency on upstream mariadb-operator" "$dep"
+for cd in "$root"/blueprints/*/compositiondefinition.yaml; do
+  [ -f "$cd" ] || { echo "::error::no CompositionDefinition at blueprints/*/compositiondefinition.yaml"; exit 1; }
   v="$(sed -n 's/^[[:space:]]*version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$cd" | head -1)"
   expect "${cd#$root/}" "$v"
 done

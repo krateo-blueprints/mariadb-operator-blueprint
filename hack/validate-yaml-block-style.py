@@ -6,10 +6,10 @@
 Block style is the org's rule for authored YAML: one key per line diffs and reviews cleanly, and a flow collection is
 where a quoting mistake hides. Empty collections ({} and []) are allowed, because block style has no way to write them.
 
-Plain YAML files are read through the parser, which reports flow style exactly. Go-templated files (helm/*/templates)
+Plain YAML files are read through the parser, which reports flow style exactly. Go-templated files (blueprints/*/chart/templates)
 are not YAML until rendered, so they are line-scanned for a flow collection opening as a value or a list item, outside
-`{{ }}` actions. Out of scope: the vendored upstream CRDs (helm/mariadb-operator-crds/templates/crds.yaml, kept byte
-equal to upstream by hack/validate-crds-vendored.py) and fetched subcharts (helm/*/charts/).
+`{{ }}` actions. Out of scope: the vendored upstream CRDs (blueprints/mariadb-operator-crds/chart/templates/crds.yaml, kept byte
+equal to upstream by hack/validate-crds-vendored.py) and fetched subcharts (blueprints/*/chart/charts/).
 
 Fails (2) when PyYAML is missing or no YAML file is found.
 """
@@ -24,7 +24,7 @@ except ImportError:
     sys.exit(2)
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else ".")
-SKIP_FILES = {os.path.join("helm", "mariadb-operator-crds", "templates", "crds.yaml")}
+SKIP_FILES = {os.path.join("blueprints", "mariadb-operator-crds", "chart", "templates", "crds.yaml")}
 FLOW_LINE = re.compile(r'(?::|^\s*-)\s+(\{(?!\{)[^}\s]|\[[^\]\s])')
 failures, parsed, scanned = [], 0, 0
 
