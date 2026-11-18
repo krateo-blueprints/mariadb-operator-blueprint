@@ -1,0 +1,30 @@
+apiVersion: v2
+name: mariadb-operator
+type: application
+description: The mariadb-operator in high availability (3 replicas, required anti-affinity, PodDisruptionBudgets) with its webhook certificate from cert-manager.
+# Literal, EQUAL to the upstream chart version (see blueprints/mariadb-operator-crds/chart/Chart.yaml). hack/validate-version-mirror.py
+# keeps this, the dependency below and the CRDs chart at one number.
+version: "26.10.2"
+appVersion: "26.10.2"
+kubeVersion: ">=1.26.0-0"
+icon: https://mariadb-operator.github.io/mariadb-operator/assets/mariadb_profile.svg
+home: https://github.com/krateo-blueprints/mariadb-operator-blueprint
+sources:
+  - https://github.com/krateo-blueprints/mariadb-operator-blueprint
+keywords:
+  - mariadb
+  - database
+  - operator
+maintainers:
+  - name: krateo
+dependencies:
+  - name: mariadb-operator
+    version: "26.10.2"
+    repository: oci://ghcr.io/mariadb-operator/charts
+annotations:
+  krateo.io/upstream-chart: oci://ghcr.io/mariadb-operator/charts/mariadb-operator
+  krateo.io/upstream-version: "26.10.2"
+  # The OCI manifest digest upstream serves for the dependency's version. Chart.lock pins the dependency set; this pins
+  # the bytes: hack/validate-chart-lock.py --live, run in lint and before every release, refuses a registry that now
+  # serves something else under the same tag.
+  krateo.io/upstream-digest: "sha256:3aba87defba96ee2be9a41192ef528a32e85c765a8162923aee4d6bd44246647"

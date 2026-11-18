@@ -1,0 +1,9 @@
+# The operator, in high availability with its webhook certificate from cert-manager. Applying it with the CRDs one is
+# safe: it refuses to render, with the reason on its status, until the CRDs (and cert-manager) are served, and then
+# renders by itself.
+apiVersion: composition.krateo.io/v26-10-2
+kind: MariadbOperator
+metadata:
+  name: mariadb-operator
+  namespace: mariadb-operator-system
+spec: {}

@@ -1,0 +1,2 @@
+The mariadb-operator CRDs (upstream {{ .Chart.AppVersion }}) are installed and kept on uninstall
+(helm.sh/resource-policy: keep). Install the operator next: the mariadb-operator chart, at the same version.

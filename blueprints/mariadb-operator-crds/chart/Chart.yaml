@@ -1,0 +1,27 @@
+apiVersion: v2
+name: mariadb-operator-crds
+type: application
+description: The mariadb-operator CRDs, vendored from upstream with helm.sh/resource-policy keep, so uninstalling never deletes a MariaDB.
+# Literal, and deliberately EQUAL to the upstream chart version rather than stamped from the tag. A composition's served
+# apiVersion is derived from this number (composition.krateo.io/v<version>), so mirroring upstream keeps an upstream bump
+# a repo-only change. PUBLISHING.md provides for this under "charts that version independently". Tag exactly this
+# version; hack/validate-version-mirror.py and hack/release-preflight refuse anything else.
+version: "26.10.2"
+appVersion: "26.10.2"
+kubeVersion: ">=1.26.0-0"
+icon: https://mariadb-operator.github.io/mariadb-operator/assets/mariadb_profile.svg
+home: https://github.com/krateo-blueprints/mariadb-operator-blueprint
+sources:
+  - https://github.com/krateo-blueprints/mariadb-operator-blueprint
+keywords:
+  - mariadb
+  - database
+  - operator
+  - crds
+maintainers:
+  - name: krateo
+annotations:
+  krateo.io/upstream-chart: oci://ghcr.io/mariadb-operator/charts/mariadb-operator-crds
+  krateo.io/upstream-version: "26.10.2"
+  # The OCI manifest digest upstream serves for that version, so a re-pushed tag is refused (hack/validate-chart-lock.py).
+  krateo.io/upstream-digest: "sha256:d2d7b7a925a0d4a113575749440ebe4610905d0c0040efd439076ff1cbe072b2"

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "mariadb-operator",
+  "description": "Installs mariadb-operator (upstream 26.10.2) in high availability, with its webhook certificate from cert-manager. Requires the mariadb-operator-crds Composition at the same version and cert-manager, and refuses to render without them.",
+  "additionalProperties": false,
+  "properties": {
+    "global": {
+      "type": "object",
+      "title": "Global values",
+      "description": "Helm global values, injected when this chart is installed as a component.",
+      "x-kubernetes-preserve-unknown-fields": true
+    },
+    "preconditions": {
+      "type": "object",
+      "title": "Preconditions",
+      "description": "enabled (default true) refuses to render while the mariadb-operator CRDs at this version or newer, or cert-manager's Certificate and Issuer CRDs, are not served. Set it false only if you manage the CRDs yourself at this version.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mariadb-operator": {
+      "type": "object",
+      "title": "Upstream chart values",
+      "description": "Passthrough to the upstream mariadb-operator chart (its values.yaml documents every key). Helm requires subchart values under a key named after the subchart and validates this schema against coalesced values that carry the subchart's full defaults, so this key is open. Keep crds.enabled false: the CRDs belong to the mariadb-operator-crds Composition.",
+      "x-kubernetes-preserve-unknown-fields": true
+    }
+  }
+}

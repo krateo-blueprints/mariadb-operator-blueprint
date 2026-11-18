@@ -1,0 +1,73 @@
+---
+type: Architecture
+title: mariadb-operator-blueprint architecture
+description: Why the CRDs are a separate, vendored and kept chart, how the operator chart wraps upstream for high availability, and how its preconditions refuse a render.
+resource: mariadb-operator
+tags:
+  - krateo
+  - architecture
+  - mariadb
+  - operator
+timestamp: 2026-11-18T00:00:00+00:00
+---
+# Architecture
+
+## Two charts, two Compositions
+
+Upstream ships `mariadb-operator-crds` and `mariadb-operator` separately, so that removing the operator never removes
+the CRDs. This blueprint keeps that split and makes each one a Composition.
+
+## The CRDs chart: vendored, and kept
+
+Upstream's `crds.yaml` (12 CRDs at 26.10.2) carries no `helm.sh/resource-policy`. Helm deletes the CRDs when that
+release is uninstalled, and Kubernetes deletes every object of those kinds with them: every `MariaDB` and every
+backup. Helm cannot annotate a dependency's templates, so this chart carries upstream's file itself, with two lines added
+to each CRD's `metadata.annotations`:
+
+- `helm.sh/resource-policy: keep`: an uninstall leaves the CRDs, and every object, in place;
+- `krateo.io/upstream-version`: the version the operator chart compares against before it renders.
+
+`hack/validate-crds-vendored.py` pulls upstream's chart at the pinned version and fails unless the vendored file, minus
+exactly those two lines per CRD, is byte-equal to upstream's.
+
+## The operator chart: upstream, made highly available
+
+The chart depends on upstream's `mariadb-operator` chart at the same version and only sets values:
+
+- `crds.enabled: false`: the CRDs belong to the CRDs chart. Upstream warns that a chart managing the CRDs deletes every
+  MariaDB when it is uninstalled.
+- The operator: 3 replicas with leader election, required pod anti-affinity by hostname, a PodDisruptionBudget with
+  `maxUnavailable: 1`. Why 3 and not 1: most operators only reconcile, so a short outage breaks nothing that is running.
+  mariadb-operator performs the replication failover itself (`autoFailover`: it promotes the most advanced replica and
+  repoints the `-primary` Service), so while no operator replica runs, a lost primary is not replaced at all. It is
+  failover-critical, and must survive a node.
+- The webhook: the same, because an unavailable webhook refuses every write to a mariadb-operator object. Its
+  certificate is a cert-manager Certificate, so upstream's cert-controller is not rendered.
+- The images, pinned explicitly to the chart's version, so they are resolved on every pull request.
+
+## Preconditions
+
+The operator chart refuses to render, with the message on the Composition's status, while:
+
+- any of the 12 CRDs is not served, or lacks `krateo.io/upstream-version` (not installed by this blueprint's CRDs
+  chart), or is older than the operator;
+- cert-manager's `certificates.cert-manager.io` or `issuers.cert-manager.io` is not served.
+
+When the render can read the nodes, it also refuses fewer than `ha.replicas` schedulable nodes: not cordoned, no
+NoSchedule/NoExecute taint the pods do not tolerate, matching their nodeSelector, counted per `kubernetes.io/hostname`.
+Listing nodes needs a permission core-provider's render identity lacks, and a refused lookup aborts the whole render,
+so the lookup runs only when an administrator has applied `blueprints/mariadb-operator/node-reader-rbac.yaml` (a
+ClusterRole for nodes/list bound to this namespace's service accounts). Without it the check is skipped and the
+ConfigMap `<release>-preconditions` records `nodes: unmeasured`.
+
+Each CRD check is a named GET of a CRD. Without core-provider's own CRD (`compositiondefinitions.core.krateo.io`) the render
+is offline (`helm template`, CI) and nothing is checked. `preconditions.enabled: false` turns the check off, for
+clusters that manage the CRDs themselves at this version.
+
+## Layout and pins
+
+- `blueprints/<chart>/chart/` holds each chart, `blueprints/<chart>/compositiondefinition.yaml` its CompositionDefinition
+  (in `mariadb-operator-system`, the `<name>-system` convention for cluster-prerequisite blueprints).
+- The upstream dependency is locked by `Chart.lock`, and each upstream chart is pinned by its OCI manifest digest
+  (`krateo.io/upstream-digest`). `hack/validate-chart-lock.py --live` checks both in lint and before every release.
+- Every workflow `uses:` is pinned to a full commit SHA (`hack/validate-release-wiring.py`).

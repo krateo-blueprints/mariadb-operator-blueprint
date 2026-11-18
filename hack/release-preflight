@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# This repository's release preflight (krateo-blueprints/charts PUBLISHING.md rule 12). It runs from
+# krateo-blueprints/charts release-preflight.yaml, which release-tag.yaml's package-and-push job `needs:`, at the tag's
+# commit, with read-only contents and no secrets, and the version as $1. A non-zero exit means nothing is stamped,
+# pushed, indexed or released.
+#
+# What it refuses:
+#   - a version that is not plain X.Y.Z;
+#   - a tag that is not the one version every artifact here mirrors from upstream: both Chart.yaml versions and
+#     appVersions, the operator chart's dependency on upstream, both CompositionDefinitions, and the
+#     krateo.io/upstream-version annotation on every vendored CRD. The charts carry a LITERAL version (the upstream
+#     one), not a CHART_VERSION placeholder the tag would stamp, so a tag that differs would publish an archive whose
+#     version disagrees with its tag.
+#
+# What it does not require: a pre-release. This repository publishes no pre-release channel (it has no
+# prerelease.yaml): its charts are upstream's chart and CRDs at a pinned version, with values set and two annotations
+# added, and lint renders and checks them on every pull request. The openstack blueprint's pre-release requirement
+# exists because its GKE pair verifies an install of many charts; the clusters that consume this one are verified
+# through that blueprint.
+#
+# Bash only, no PyYAML: the reusable job installs nothing. hack/validate-version-mirror.py checks the same set in lint.
+#
+# Usage: hack/release-preflight X.Y.Z
+set -euo pipefail
+
+version="${1:-}"
+if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "::error::'${version}' is not a plain X.Y.Z release version"
+  exit 1
+fi
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+crds_chart="$root/blueprints/mariadb-operator-crds/chart/Chart.yaml"
+op_chart="$root/blueprints/mariadb-operator/chart/Chart.yaml"
+crds_file="$root/blueprints/mariadb-operator-crds/chart/templates/crds.yaml"
+bad=0
+
+# field FILE KEY: the value of a top-level `KEY:` line, quotes stripped.
+field() { sed -n "s/^$2:[[:space:]]*\"\{0,1\}\([^\"]*\)\"\{0,1\}[[:space:]]*$/\1/p" "$1" | head -1; }
+
+expect() {
+  local what="$1" got="$2"
+  if [ -z "$got" ]; then
+    echo "::error::${what} is missing"; bad=1
+  elif [ "$got" != "$version" ]; then
+    echo "::error::${what} is ${got}, not the tag ${version}"; bad=1
+  fi
+}
+
+for f in "$crds_chart" "$op_chart" "$crds_file"; do
+  [ -f "$f" ] || { echo "::error::${f#$root/} is missing; nothing to check the tag against"; exit 1; }
+done
+
+expect "blueprints/mariadb-operator-crds/chart version" "$(field "$crds_chart" version)"
+expect "blueprints/mariadb-operator-crds/chart appVersion" "$(field "$crds_chart" appVersion)"
+expect "blueprints/mariadb-operator/chart version" "$(field "$op_chart" version)"
+expect "blueprints/mariadb-operator/chart appVersion" "$(field "$op_chart" appVersion)"
+dep="$(awk '/^dependencies:/{d=1} d && /name: mariadb-operator$/{n=1} n && /version:/{gsub(/[" ]/,"",$2); print $2; exit}' "$op_chart")"
+expect "blueprints/mariadb-operator/chart's dependency on upstream mariadb-operator" "$dep"
+for cd in "$root"/blueprints/*/compositiondefinition.yaml; do
+  [ -f "$cd" ] || { echo "::error::no CompositionDefinition at blueprints/*/compositiondefinition.yaml"; exit 1; }
+  v="$(sed -n 's/^[[:space:]]*version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$cd" | head -1)"
+  expect "${cd#$root/}" "$v"
+done
+crds="$(grep -c '^kind: CustomResourceDefinition' "$crds_file" || true)"
+annotated="$(grep -c "^    krateo.io/upstream-version: \"${version}\"$" "$crds_file" || true)"
+if [ "$crds" -eq 0 ]; then
+  echo "::error::the vendored CRD file holds no CustomResourceDefinition"; bad=1
+elif [ "$annotated" -ne "$crds" ]; then
+  echo "::error::${annotated} of ${crds} vendored CRDs carry krateo.io/upstream-version \"${version}\""; bad=1
+fi
+
+if [ "$bad" -ne 0 ]; then
+  echo "::error::refusing to release ${version}: tag exactly the version the charts mirror (docs/release.md)"
+  exit 1
+fi
+echo "release ${version}: both charts, the upstream dependency, both CompositionDefinitions and all ${crds} CRDs agree"

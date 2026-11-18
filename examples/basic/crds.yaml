@@ -1,0 +1,7 @@
+# The CRDs first: cluster-scoped, kept on uninstall. The Composition's namespace only holds the release.
+apiVersion: composition.krateo.io/v26-10-2
+kind: MariadbOperatorCrds
+metadata:
+  name: mariadb-operator-crds
+  namespace: mariadb-operator-system
+spec: {}
