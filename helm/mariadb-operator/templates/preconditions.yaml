@@ -1,0 +1,4 @@
+{{- /* Renders nothing; refuses the render while the operator's preconditions do not hold (_preconditions.tpl). */ -}}
+{{- if .Values.preconditions.enabled }}
+{{- include "mdbop.preconditions" (list $ (include "mdbop.liveCRDs" . | fromJson)) }}
+{{- end }}

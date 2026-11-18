@@ -1,0 +1,3 @@
+# No values. The CRDs are rendered exactly as upstream ships them, plus two annotations on each
+# (templates/crds.yaml): helm.sh/resource-policy keep, and the upstream version the operator chart compares against.
+global: {}

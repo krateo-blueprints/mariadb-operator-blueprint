@@ -1,0 +1,22 @@
+# mariadb-operator-blueprint
+
+Krateo blueprint for mariadb-operator 26.10.2, as two Compositions published on the blueprints channel:
+oci://ghcr.io/krateo-blueprints/charts/mariadb-operator-crds and oci://ghcr.io/krateo-blueprints/charts/mariadb-operator.
+
+## Shape
+- helm/mariadb-operator-crds: the 12 upstream CRDs, vendored, each with helm.sh/resource-policy keep and
+  krateo.io/upstream-version. Kind MariadbOperatorCrds.
+- helm/mariadb-operator: upstream chart 26.10.2 as a dependency; 3 replicas with leader election, required hostname
+  anti-affinity, PodDisruptionBudgets, webhook certificate from cert-manager. Kind MariadbOperator.
+- compositiondefinitions/<chart>/compositiondefinition.yaml: shipped inside each archive.
+
+## Preconditions
+- cert-manager from any source (Krateo installer features.ingress, or a generic install).
+- The operator chart refuses to render while the CRDs (at its version or newer) or cert-manager's CRDs are not served.
+
+## Versioning
+- Literal 26.10.2 in both charts, mirroring upstream; served at composition.krateo.io/v26-10-2.
+- Tag exactly 26.10.2; hack/release-preflight refuses any other tag.
+
+## Docs
+- docs/overview.md, docs/usage.md, docs/configuration.md, docs/api.md, docs/examples.md, docs/release.md, docs/log.md

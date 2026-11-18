@@ -1,0 +1,77 @@
+name: lint
+
+# Gates every pull request and every commit on main (release-tag.yaml refuses a commit no lint run passed on,
+# PUBLISHING.md rule 10). The gates job is authoritative; the helm job is informational output.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-docs:
+    uses: krateo-platformops/.github/.github/workflows/lint-docs.yaml@main
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: helm lint every chart
+        run: |
+          set -euo pipefail
+          for dir in helm/*/; do
+            echo "::group::${dir}"
+            helm dependency update "$dir"
+            helm lint "$dir" --kube-version 1.36.0
+            echo "::endgroup::"
+          done
+
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: Install Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Every gate below exits 2 without its parser rather than passing on nothing.
+      - name: Install PyYAML
+        run: pip install "PyYAML==6.0.2"
+
+      # Both charts, the upstream dependency, the CompositionDefinitions, the image tags, the CRD annotations and the
+      # example Compositions carry the one upstream version; a tag can only be that version.
+      - name: One version everywhere
+        run: python3 hack/validate-version-mirror.py .
+
+      # The vendored CRDs equal upstream's byte for byte apart from helm.sh/resource-policy keep and the version
+      # annotation, so an uninstall never deletes a MariaDB and nothing drifts unnoticed.
+      - name: The vendored CRDs are upstream's, kept on uninstall
+        run: python3 hack/validate-crds-vendored.py .
+
+      # The operator and webhook run 3 replicas spread over nodes with drainable budgets, the webhook certificate is
+      # cert-manager's, the chart owns no CRD, and it refuses to render without the CRDs and cert-manager.
+      - name: The operator is highly available and refuses without its preconditions
+        run: python3 hack/validate-operator-ha.py .
+
+      # release-tag.yaml calls the release preflight first and the publisher last, both pinned to one charts release;
+      # hack/release-preflight refuses every tag but the mirrored version.
+      - name: The release refuses any tag but the mirrored version
+        run: python3 hack/validate-release-wiring.py .
+
+      - name: Repository YAML is block style
+        run: python3 hack/validate-yaml-block-style.py .

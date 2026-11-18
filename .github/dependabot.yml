@@ -1,0 +1,8 @@
+# Keeps every pinned action and reusable workflow current, including the organisation's publisher and release preflight,
+# which release-tag.yaml pins by full commit SHA (krateo-blueprints/charts PUBLISHING.md rule 9).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

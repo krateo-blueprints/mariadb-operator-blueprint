@@ -1,0 +1,23 @@
+apiVersion: v2
+name: mariadb-operator
+type: application
+description: The mariadb-operator in high availability (3 replicas, required anti-affinity, PodDisruptionBudgets) with its webhook certificate from cert-manager.
+# Literal, EQUAL to the upstream chart version (see helm/mariadb-operator-crds/Chart.yaml). hack/validate-version-mirror.py
+# keeps this, the dependency below and the CRDs chart at one number.
+version: "26.10.2"
+appVersion: "26.10.2"
+kubeVersion: ">=1.26.0-0"
+icon: https://mariadb-operator.github.io/mariadb-operator/assets/mariadb_profile.svg
+home: https://github.com/krateo-blueprints/mariadb-operator-blueprint
+sources:
+  - https://github.com/krateo-blueprints/mariadb-operator-blueprint
+keywords:
+  - mariadb
+  - database
+  - operator
+maintainers:
+  - name: krateo
+dependencies:
+  - name: mariadb-operator
+    version: "26.10.2"
+    repository: oci://ghcr.io/mariadb-operator/charts

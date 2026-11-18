@@ -1,0 +1,54 @@
+# The upstream chart's values live under its name, mariadb-operator. What this blueprint sets, and why:
+#   - crds.enabled false: the CRDs come only from the mariadb-operator-crds chart, which keeps them on uninstall.
+#     Upstream warns that a chart managing the CRDs DELETES every MariaDB when it is uninstalled.
+#   - ha: 3 replicas with leader election, required anti-affinity by hostname, a PodDisruptionBudget allowing one
+#     disruption. With replication topologies the operator performs failover, so it must survive a node.
+#   - webhook: the same, and its certificate from cert-manager (a precondition from any source: templates/preconditions.yaml
+#     refuses to render while cert-manager's CRDs are not served). Upstream's cert-controller is then not rendered.
+# Nothing here names a cloud provider, a StorageClass or a node pool.
+preconditions:
+  # Refuse to render while these are not served by the cluster: the operator would start against nothing.
+  enabled: true
+global: {}
+mariadb-operator:
+  crds:
+    enabled: false
+  # The images, pinned to the chart's version explicitly (upstream defaults the tag to its appVersion), so
+  # hack/preflight-refs.py resolves them on every pull request and hack/validate-version-mirror.py keeps them at the
+  # one version.
+  image:
+    repository: ghcr.io/mariadb-operator/mariadb-operator
+    tag: "26.10.2"
+  ha:
+    enabled: true
+    replicas: 3
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: mariadb-operator
+          topologyKey: kubernetes.io/hostname
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+  webhook:
+    image:
+      repository: ghcr.io/mariadb-operator/mariadb-operator
+      tag: "26.10.2"
+    ha:
+      enabled: true
+      replicas: 3
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: mariadb-operator-webhook
+            topologyKey: kubernetes.io/hostname
+    pdb:
+      enabled: true
+      maxUnavailable: 1
+    cert:
+      certManager:
+        enabled: true

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "mariadb-operator CRDs",
+  "description": "Installs the mariadb-operator CRDs (upstream 26.10.2), kept on uninstall. Takes no configuration.",
+  "additionalProperties": false,
+  "properties": {
+    "global": {
+      "type": "object",
+      "title": "Global values",
+      "description": "Helm global values, injected when this chart is installed as a component.",
+      "x-kubernetes-preserve-unknown-fields": true
+    }
+  }
+}
