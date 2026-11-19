@@ -1,0 +1,22 @@
+# The upstream license files this repository ships, one per chart that redistributes upstream's work: the CRDs chart
+# vendors upstream's crds.yaml, and the operator chart packages upstream's chart as its dependency. Each is fetched,
+# unchanged, from the upstream repository at the chart's own release tag (<upstream chart name>-<upstream version>,
+# both from the chart's Chart.yaml annotations) into blueprints/<chart>/chart/files/upstream/<file>.
+# hack/validate-crds-vendored.py checks each against its digest and, live, against the repository at that tag, and that
+# NOTICE names it.
+#   chart    the blueprint directory under blueprints/
+#   repo     the upstream GitHub repository
+#   file     the file, at the repository root and under files/upstream/
+#   license  its SPDX identifier, as NOTICE names it
+#   digest   its SHA-256
+notices:
+  - chart: mariadb-operator-crds
+    repo: mariadb-operator/mariadb-operator
+    file: LICENSE
+    license: MIT
+    digest: 825c895aa26f3a08507f293e2a18919affda7df349d428e26ef0891879142028
+  - chart: mariadb-operator
+    repo: mariadb-operator/mariadb-operator
+    file: LICENSE
+    license: MIT
+    digest: 825c895aa26f3a08507f293e2a18919affda7df349d428e26ef0891879142028

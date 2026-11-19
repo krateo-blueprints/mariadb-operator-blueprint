@@ -114,3 +114,9 @@ the upstream release it installs, and an upstream bump is a repo-only change. Co
 
 Pull requests run [lint.yaml](.github/workflows/lint.yaml) (the gates in `hack/`) and
 [preflight-refs.yaml](.github/workflows/preflight-refs.yaml). See [docs/release.md](docs/release.md).
+
+## License
+
+This repository's own work is licensed under the [Apache License 2.0](LICENSE). mariadb-operator, whose CRDs the CRDs
+chart vendors and whose chart the operator chart packages, keeps its own MIT license and ships with it: see
+[NOTICE](NOTICE).

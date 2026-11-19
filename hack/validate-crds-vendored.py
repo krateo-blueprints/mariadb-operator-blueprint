@@ -17,9 +17,14 @@ chart at the version Chart.yaml names (annotations krateo.io/upstream-chart and 
   1. the vendored file with exactly those two lines removed from each CRD equals upstream's templates/crds.yaml;
   2. every CRD carries both lines, once, in that order, right after `annotations:`;
   3. the CRD set equals what the operator chart requires before it renders (mdbop.requiredCRDs);
-  4. the CRDs chart renders exactly those CRDs and nothing else.
+  4. the CRDs chart renders exactly those CRDs and nothing else;
+  5. upstream's license ships with what is redistributed (hack/upstream-notices.yaml): for each chart, the file under
+     blueprints/<chart>/chart/files/upstream/ has its recorded SHA-256 and is byte-equal to the file in the upstream
+     repository at that chart's release tag (<upstream chart name>-<upstream version>, from its Chart.yaml
+     annotations); NOTICE names the upstream's tree at that tag, its license and the file; LICENSE is the Apache License
+     2.0 that covers this repository's own work.
 
-Needs helm and network access to the upstream registry. Fails (2) when either is missing, or upstream's chart has no
+Needs helm and network access to the upstream registry and to raw.githubusercontent.com. Fails (2) when either is missing, or upstream's chart has no
 crds.yaml: a comparison with nothing on one side proves nothing.
 """
 import os
@@ -27,8 +32,10 @@ import re
 import shutil
 import subprocess
 import sys
+import hashlib
 import tarfile
 import tempfile
+import urllib.request
 
 try:
     import yaml
@@ -132,9 +139,54 @@ with tempfile.TemporaryDirectory() as tmp:
         if others or sorted(n for _, n in kinds) != sorted(names):
             fail("4: the CRDs chart renders %s besides or instead of its %d CRDs" % (others, len(names)))
 
+# 5. upstream's license ships with what is redistributed
+notices = (yaml.safe_load(open(os.path.join(ROOT, "hack", "upstream-notices.yaml"))) or {}).get("notices") or []
+if not notices:
+    measurement_failed("hack/upstream-notices.yaml lists no upstream license, so none was checked")
+notice_path = os.path.join(ROOT, "NOTICE")
+notice_text = open(notice_path, encoding="utf-8").read() if os.path.isfile(notice_path) else ""
+lic_path = os.path.join(ROOT, "LICENSE")
+lic_head = open(lic_path).read(2000) if os.path.isfile(lic_path) else ""
+if "Apache License" not in lic_head or "Version 2.0" not in lic_head:
+    fail("5: LICENSE is missing or is not the Apache License 2.0 that covers this repository's own work")
+charts_with_notice = set()
+for n in notices:
+    cdir = os.path.join(ROOT, "blueprints", n["chart"], "chart")
+    cann = (yaml.safe_load(open(os.path.join(cdir, "Chart.yaml"))) or {}).get("annotations") or {}
+    cref, cver = cann.get("krateo.io/upstream-chart"), str(cann.get("krateo.io/upstream-version") or "")
+    if not cref or not cver:
+        fail("5: blueprints/%s/chart/Chart.yaml names no upstream chart and version to derive the tag from" % n["chart"])
+        continue
+    tag = "%s-%s" % (cref.rstrip("/").rsplit("/", 1)[-1], cver)
+    fpath = os.path.join(cdir, "files", "upstream", n["file"])
+    rel = os.path.relpath(fpath, ROOT)
+    if not os.path.isfile(fpath):
+        fail("5: %s is missing" % rel)
+        continue
+    data = open(fpath, "rb").read()
+    if hashlib.sha256(data).hexdigest() != n["digest"]:
+        fail("5: %s has SHA-256 %s, hack/upstream-notices.yaml records %s"
+             % (rel, hashlib.sha256(data).hexdigest(), n["digest"]))
+    url = "https://raw.githubusercontent.com/%s/%s/%s" % (n["repo"], tag, n["file"])
+    try:
+        served = urllib.request.urlopen(url, timeout=60).read()
+    except Exception as ex:
+        measurement_failed("could not read %s: %s" % (url, ex))
+    if served != data:
+        fail("5: %s differs from %s (SHA-256 %s)" % (rel, url, hashlib.sha256(served).hexdigest()))
+    for want in ("github.com/%s/tree/%s" % (n["repo"], tag), n["license"], rel):
+        if want not in notice_text:
+            fail("5: NOTICE does not name %s" % want)
+    charts_with_notice.add(n["chart"])
+for c in ("mariadb-operator-crds", "mariadb-operator"):
+    if c not in charts_with_notice:
+        fail("5: %s redistributes upstream's work but hack/upstream-notices.yaml ships no license for it" % c)
+
 if failures:
     for f in failures:
         print("FAIL: " + f)
     sys.exit(1)
 print("OK: %d CRDs equal upstream %s %s byte for byte apart from keep and upstream-version, each annotated once; the "
-      "operator chart requires exactly this set; the chart renders nothing else" % (docs_seen, ref, version))
+      "operator chart requires exactly this set; the chart renders nothing else; %d upstream license file(s) match their "
+      "digest and the repository at the tag, NOTICE names them, LICENSE is Apache-2.0"
+      % (docs_seen, ref, version, len(charts_with_notice)))

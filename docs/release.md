@@ -44,6 +44,9 @@ them are verified through the blueprints that use them.
    `krateo.io/upstream-digest` to the manifest digest `helm pull` prints for the new version.
 3. Re-vendor the CRDs: upstream's `templates/crds.yaml` from the new `mariadb-operator-crds` chart, with the two
    annotation lines added to each CRD. Update `mdbop.requiredCRDs` if the set changed.
+   Re-fetch upstream's `LICENSE` at each chart's new release tag (`mariadb-operator-crds-<version>`,
+   `mariadb-operator-<version>`) into its `files/upstream/`, unchanged, and record its `digest` in
+   `hack/upstream-notices.yaml`. If the license changed, update `license` there and in `NOTICE`.
 4. Run the gates in `hack/`; `validate-version-mirror.py` and `validate-crds-vendored.py` say exactly what is out of
    step.
 5. Merge, then tag the new version.

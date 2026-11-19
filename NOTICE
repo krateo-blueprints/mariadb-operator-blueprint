@@ -1,0 +1,38 @@
+Krateo mariadb-operator Blueprint
+Copyright 2026 Krateo S.r.l.
+
+The original work of this repository is licensed under the Apache License,
+Version 2.0 (LICENSE): the charts' templates, values and schemas, the
+CompositionDefinitions and RBAC, the gates and scripts under hack/, the
+workflows, the examples and the documentation.
+
+This repository also redistributes the work of an upstream project, which keeps
+its own license and is not relicensed by this repository:
+
+  mariadb-operator, 26.10.2
+    Source:   https://github.com/mariadb-operator/mariadb-operator
+    License:  MIT License (MIT)
+    Copyright © 2023 MariaDB plc (from its LICENSE)
+
+  - The CRDs chart vendors upstream's mariadb-operator-crds chart's
+    templates/crds.yaml at 26.10.2, with two annotations added to each CRD
+    (helm.sh/resource-policy: keep and krateo.io/upstream-version):
+      Vendored: blueprints/mariadb-operator-crds/chart/templates/crds.yaml
+      Upstream: https://github.com/mariadb-operator/mariadb-operator/tree/mariadb-operator-crds-26.10.2
+      Its license, as released at that tag:
+                blueprints/mariadb-operator-crds/chart/files/upstream/LICENSE
+
+  - The operator chart depends on upstream's mariadb-operator chart 26.10.2
+    (oci://ghcr.io/mariadb-operator/charts/mariadb-operator, locked by Chart.lock
+    and pinned by digest), which a release packages into the published chart:
+      Upstream: https://github.com/mariadb-operator/mariadb-operator/tree/mariadb-operator-26.10.2
+      Its license, as released at that tag:
+                blueprints/mariadb-operator/chart/files/upstream/LICENSE
+
+hack/validate-crds-vendored.py checks the vendored CRDs against upstream, and
+each upstream license file against the digest recorded in
+hack/upstream-notices.yaml and against the repository at its tag.
+
+The operator container image the chart deploys
+(ghcr.io/mariadb-operator/mariadb-operator) is pulled from upstream's registry
+and is not redistributed here.

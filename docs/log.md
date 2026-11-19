@@ -14,6 +14,11 @@ timestamp: 2026-11-18T00:00:00+00:00
 
 ## 2026-11
 
+- **Licensing:** this repository's own work is under the Apache License 2.0 (`LICENSE`, the same file
+  krateo-openstack-blueprint ships). mariadb-operator is MIT (checked at 26.10.2). Its `LICENSE`, fetched at each
+  chart's release tag, ships in both charts' `files/upstream/`: the CRDs chart vendors upstream's CRDs, and the
+  operator chart packages upstream's chart. `NOTICE` names the upstream, its tags, its license and those files.
+  `hack/validate-crds-vendored.py` holds each file to a recorded digest and to the upstream repository at the tag.
 - **Initial blueprint, mariadb-operator 26.10.2.**
   - Two charts and Compositions: the CRDs, vendored from upstream with `helm.sh/resource-policy: keep` (upstream sets
     none on any of its 12 CRDs, read at 26.10.2), and the operator in high availability with its webhook certificate
