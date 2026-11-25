@@ -319,7 +319,7 @@ jobs:
     needs: package-and-push
     # PUBLISHING.md rule 9: pinned by full commit SHA, the same release as the preflight; .github/dependabot.yml keeps
     # both current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@70095ab05f1c5dc6c8dd39d0b1fdbbc7382a841c # 1.4.3
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@0794359c611fc736f101ecc64d3a86e0ddcad718 # 1.8.0
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
